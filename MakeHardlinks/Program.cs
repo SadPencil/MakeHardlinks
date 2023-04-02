@@ -29,6 +29,19 @@ namespace MakeHardlinks
             {
                 // parse the command line
                 List<string> extra = options.Parse(args);
+
+                if (shouldShowHelp)
+                {
+                    Console.WriteLine("Help:");
+                    Console.WriteLine("[arguments] <src_dir> <dest_dir>");
+                    foreach (var option in options)
+                    {
+                        Console.WriteLine($"{option.Prototype}\t\t{option.Description}");
+                    }
+                    return;
+
+                }
+
                 srcFolder = extra[0];
                 dstFolder = extra[1];
 
@@ -47,16 +60,6 @@ namespace MakeHardlinks
                 Console.WriteLine(e.Message);
                 Console.WriteLine("Try `--help' for more information.");
                 return;
-            }
-
-            if (shouldShowHelp)
-            {
-                Console.WriteLine("Help:");
-                Console.WriteLine("[arguments] <src_dir> <dest_dir>");
-                foreach (var option in options)
-                {
-                    Console.WriteLine($"{option.Prototype}\t\t{option.Description}");
-                }
             }
 
             try
