@@ -13,12 +13,14 @@ namespace MakeHardlinks
             // these variables will be set when the command line is parsed
             int verbosity = 0;
             bool shouldShowHelp = false;
+            bool fallback = false;
             var allowedExt = new List<string>();
             var disallowedExt = new List<string>();
             // these are the available options, note that they set the variables
             var options = new OptionSet {
                 { "allow=", "only make hardlinks for files with given extensions; copy other files, e.g., --allow=.exe --allow=.png", n => allowedExt.Add (n.ToUpperInvariant()) },
                 { "disallow=", "copy and don't make hardlinks for files with given extensions, e.g., --disallow=.ini --disallow=.conf", n=> disallowedExt.Add (n.ToUpperInvariant()) },
+                { "fallback", "copy files if making hardlinks fails", f => fallback = f != null },
                 { "v|verbose", "print filepath when processing every file", v => { if (v != null) ++verbosity; } },
                 { "h|help", "show this message and exit", h => shouldShowHelp = h != null },
             };
@@ -64,7 +66,7 @@ namespace MakeHardlinks
 
             try
             {
-                MyIO.CreateHardLinksOfFiles(srcFolder, dstFolder, true, disallowedExt, allowedExt,
+                MyIO.CreateHardLinksOfFiles(srcFolder, dstFolder, true, fallback, disallowedExt, allowedExt,
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Make a hard link from {src} to {dst}."); },
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Copy a file from {src} to {dst}."); },
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Create a directory at {dst}."); }

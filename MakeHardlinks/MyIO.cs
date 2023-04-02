@@ -122,7 +122,8 @@ namespace MakeHardlinks
         /// <param name="copyFileCallback"></param>
         public static void CreateHardLinksOfFiles(
             string srcDirectory, string destDirectory,
-            bool @override = false, List<string> disallowedExtensions = null, List<string> allowedExtensions = null,
+            bool @override, bool fallback,
+            List<string> disallowedExtensions = null, List<string> allowedExtensions = null,
             Action<string, string> hardLinkCallback = null, Action<string, string> copyFileCallback = null, Action<string, string> createDirectoryCallback = null)
         {
             Debug.WriteLine("Source: " + srcDirectory);
@@ -154,12 +155,13 @@ namespace MakeHardlinks
                 string relativeName = srcFullName.Substring(srcDirectory.Length + 1);
                 string destFullName = Path.Combine(destDirectory, relativeName);
 
-                CreateHardLinkOrCopy(destFullName, srcFullName, @override, disallowedExtensions, allowedExtensions, hardLinkCallback, copyFileCallback);
+                CreateHardLinkOrCopy(destFullName, srcFullName, @override, fallback, disallowedExtensions, allowedExtensions, hardLinkCallback, copyFileCallback);
             }
         }
 
         public static void CreateHardLinkOrCopy(string destFile, string srcFile,
-            bool @override, List<string> disallowedExtensions, List<string> allowedExtensions,
+            bool @override, bool fallback,
+            List<string> disallowedExtensions, List<string> allowedExtensions,
             Action<string, string> hardLinkCallback = null, Action<string, string> copyFileCallback = null)
         {
             string ext = Path.GetExtension(destFile).ToUpperInvariant();
@@ -180,7 +182,11 @@ namespace MakeHardlinks
                     if (!success)
                     {
                         uint error = NativeMethods.GetLastError();
-                        throw new Exception($"Failed to make a hardlink from {srcFile} to {destFile}. Error code {error}.");
+                        string errMsg = $"Failed to make a hardlink from {srcFile} to {destFile}. Error code {error}.";
+                        if (!fallback) throw new Exception(errMsg);
+
+                        copyFileCallback?.Invoke(srcFile, destFile);
+                        File.Copy(srcFile, destFile, @override);
                     }
                 }
                 else
