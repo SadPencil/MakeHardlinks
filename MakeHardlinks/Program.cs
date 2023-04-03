@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 
 namespace MakeHardlinks
 {
@@ -30,7 +29,7 @@ namespace MakeHardlinks
             try
             {
                 // parse the command line
-                List<string> extra = options.Parse(args);
+                var extra = options.Parse(args);
 
                 if (shouldShowHelp)
                 {
