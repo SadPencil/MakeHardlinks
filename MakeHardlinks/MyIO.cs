@@ -11,7 +11,7 @@ namespace MakeHardlinks
         /// <summary>
         /// Delete everything in the directory.
         /// </summary>
-        /// <param name="directory">The directory to be cleared</param>
+        /// <param name="directory">The directory to be cleared.</param>
         public static void ClearDirectory(string directory)
         {
 
@@ -30,7 +30,7 @@ namespace MakeHardlinks
         /// Note that in the ReFS file system, the method might not work properly. Must use GetFileInformationByHandleEx() to support ReFS.
         /// </summary>
         /// <param name="fileA">A file's path.</param>
-        /// <param name="fileB">Another file's path</param>
+        /// <param name="fileB">Another file's path.</param>
         /// <returns></returns>
         public static bool IsSameFile(string fileA, string fileB)
         {
@@ -88,8 +88,8 @@ namespace MakeHardlinks
         /// <summary>
         /// Delete all empty subfolders.
         /// </summary>
-        /// <param name="directory">The folder</param>
-        /// <returns> Whether the folder is deleted or not.</returns>
+        /// <param name="directory">The folder.</param>
+        /// <returns>Whether the folder is deleted or not.</returns>
         public static bool RemoveEmptyFolders(string directory)
         {
             bool status = true;
@@ -115,16 +115,22 @@ namespace MakeHardlinks
         /// </summary>
         /// <param name="srcDirectory">The source folder.</param>
         /// <param name="destDirectory">The destination folder.</param>
-        /// <param name="override">Whether override files if exist</param>
-        /// <param name="disallowedExtensions"></param>
-        /// <param name="allowedExtensions"></param>
-        /// <param name="hardLinkCallback"></param>
-        /// <param name="copyFileCallback"></param>
+        /// <param name="override">Whether override files if exist.</param>
+        /// <param name="fallback">If hardlink a file fails, copy it instead.</param>
+        /// <param name="disallowedExtensions">Files with these extensions must be copied instead of hardlinked.</param>
+        /// <param name="allowedExtensions">Only files with these extensions can be hardlinked, if they are not disallowed.<br/>Specify null if all extensions are allowed.<br/>Specify an empty list if all files must be copied.</param>
+        /// <param name="hardLinkCallback">Triggers when a file is being hardlinked.</param>
+        /// <param name="copyFileCallback">Triggers when a file is being copied.</param>
+        /// <param name="ignorableExceptionCallback">Triggers when an ignorable exception occurs.</param>
+        /// <param name="createDirectoryCallback">Triggers when a directory is created.</param>
         public static void CreateHardLinksOfFiles(
             string srcDirectory, string destDirectory,
             bool @override, bool fallback,
             List<string> disallowedExtensions = null, List<string> allowedExtensions = null,
-            Action<string, string> hardLinkCallback = null, Action<string, string> copyFileCallback = null, Action<string, string> createDirectoryCallback = null)
+            Action<string, string> hardLinkCallback = null,
+            Action<string, string> copyFileCallback = null,
+            Action<Exception> ignorableExceptionCallback = null,
+            Action<string, string> createDirectoryCallback = null)
         {
             Debug.WriteLine("Source: " + srcDirectory);
 
@@ -155,14 +161,28 @@ namespace MakeHardlinks
                 string relativeName = srcFullName.Substring(srcDirectory.Length + 1);
                 string destFullName = Path.Combine(destDirectory, relativeName);
 
-                CreateHardLinkOrCopy(destFullName, srcFullName, @override, fallback, disallowedExtensions, allowedExtensions, hardLinkCallback, copyFileCallback);
+                CreateHardLinkOrCopy(srcFullName, destFullName, @override, fallback, disallowedExtensions, allowedExtensions, hardLinkCallback, copyFileCallback, ignorableExceptionCallback);
             }
         }
 
-        public static void CreateHardLinkOrCopy(string destFile, string srcFile,
+        /// <summary>
+        /// Create hard links for a file, just like copying.
+        /// </summary>
+        /// <param name="srcFile">The source file.</param>
+        /// <param name="destFile">The destination file.</param>
+        /// <param name="override">Whether override files if exist.</param>
+        /// <param name="fallback">If hardlink a file fails, copy it instead.</param>
+        /// <param name="disallowedExtensions">Files with these extensions must be copied instead of hardlinked.</param>
+        /// <param name="allowedExtensions">Only files with these extensions can be hardlinked, if they are not disallowed.<br/>Specify null if all extensions are allowed.<br/>Specify an empty list if all files must be copied.</param>
+        /// <param name="hardLinkCallback">Triggers when a file is being hardlinked.</param>
+        /// <param name="copyFileCallback">Triggers when a file is being copied.</param>
+        /// <param name="ignorableExceptionCallback">Triggers when an ignorable exception occurs.</param>
+        public static void CreateHardLinkOrCopy(string srcFile, string destFile,
             bool @override, bool fallback,
             List<string> disallowedExtensions, List<string> allowedExtensions,
-            Action<string, string> hardLinkCallback = null, Action<string, string> copyFileCallback = null)
+            Action<string, string> hardLinkCallback = null,
+            Action<string, string> copyFileCallback = null,
+            Action<Exception> ignorableExceptionCallback = null)
         {
             string ext = Path.GetExtension(destFile).ToUpperInvariant();
             if (File.Exists(destFile) && @override)
@@ -183,7 +203,9 @@ namespace MakeHardlinks
                     {
                         uint error = NativeMethods.GetLastError();
                         string errMsg = $"Failed to make a hardlink from {srcFile} to {destFile}. Error code {error}.";
-                        if (!fallback) throw new Exception(errMsg);
+                        var ex = new Exception(errMsg);
+                        if (!fallback) throw ex;
+                        ignorableExceptionCallback?.Invoke(ex);
 
                         copyFileCallback?.Invoke(srcFile, destFile);
                         File.Copy(srcFile, destFile, @override);

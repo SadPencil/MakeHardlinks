@@ -33,11 +33,11 @@ namespace MakeHardlinks
 
                 if (shouldShowHelp)
                 {
-                    Console.WriteLine("Help:");
-                    Console.WriteLine("[arguments] <src_dir> <dest_dir>");
+                    Console.Error.WriteLine("Help:");
+                    Console.Error.WriteLine("[arguments] <src_dir> <dest_dir>");
                     foreach (var option in options)
                     {
-                        Console.WriteLine($"{option.Prototype}\t\t{option.Description}");
+                        Console.Error.WriteLine($"{option.Prototype}\t\t{option.Description}");
                     }
                     return;
 
@@ -58,8 +58,8 @@ namespace MakeHardlinks
             catch (Exception e)
             {
                 // output some error message
-                Console.WriteLine(e.Message);
-                Console.WriteLine("Try `--help' for more information.");
+                Console.Error.WriteLine(e.Message);
+                Console.Error.WriteLine("Try `--help' for more information.");
                 return;
             }
 
@@ -68,6 +68,7 @@ namespace MakeHardlinks
                 MyIO.CreateHardLinksOfFiles(srcFolder, dstFolder, true, fallback, disallowedExt, allowedExt,
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Make a hard link from {src} to {dst}."); },
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Copy a file from {src} to {dst}."); },
+                    (ex) => Console.Error.WriteLine(ex.Message),
                     (src, dst) => { if (verbosity >= 1) Console.WriteLine($"Create a directory at {dst}."); }
                 );
             }
